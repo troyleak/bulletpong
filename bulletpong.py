@@ -17,14 +17,16 @@ import random
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-screen_size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+SCREEN_SIZE = [SCREEN_WIDTH, SCREEN_HEIGHT]
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 
-MAX_BOUNCES = 20
+MAX_BOUNCES = 5
+WIN_SCORE = 2
+score = 0
 
 # For Debugging. Multiple arguments will be printed on separate lines
 DEBUG = True
@@ -37,9 +39,7 @@ class Ball(pygame.sprite.Sprite):
 
     # Constructor. Pass in the color of the block, and its x and y position
     def __init__(self, x, y):
-        # Call the parent class (Sprite) constructor
         super().__init__()
-
         # Create the image of the ball
         self.image = pygame.Surface([10, 10])
 
@@ -83,13 +83,8 @@ class Ball(pygame.sprite.Sprite):
         # Direction of ball (in degrees)
         self.direction = 0
 
-    # This function will bounce the ball off a horizontal surface (not a vertical one)
-    def bounce(self, diff): # Diff is always degrees
-        # logger("Ball bouncing", "Direction: {0}".format(self.direction))
-        # if vertical == True:
-        #     self.direction = self.direction+180
-        # else:
-        #     self.direction = (180-self.direction)%360
+    def bounce(self, diff):
+        # Diff is always degrees
 
         self.direction = diff
         self.bounces += 1
@@ -202,13 +197,14 @@ class Bullet(pygame.sprite.Sprite):
         # and end points. This is the angle the bullet will travel.
         x_diff = dest_x - start_x
         y_diff = dest_y - start_y
-        self.angle = math.atan2(y_diff, x_diff);
+        self.angle_radians = math.atan2(y_diff, x_diff);
+        self.angle_degrees = math.degrees(self.angle_radians)
 
         # Taking into account the angle, calculate our change_x
         # and change_y. Velocity is how fast the bullet travels.
-        self.velocity = 5
-        self.change_x = math.cos(self.angle) * self.velocity
-        self.change_y = math.sin(self.angle) * self.velocity
+        self.velocity = 10
+        self.change_x = math.cos(self.angle_radians) * self.velocity
+        self.change_y = math.sin(self.angle_radians) * self.velocity
 
     def update(self):
         """ Move the bullet. """
@@ -226,56 +222,54 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.x < 0 or self.rect.x > SCREEN_WIDTH or self.rect.y < 0 or self.rect.y > SCREEN_HEIGHT:
             logger("--- Bullet Exited Screen ---", "X and Y positions: ({0},{1})".format(self.rect.x, self.rect.y),
                     "Speed: {0}".format(self.velocity),
-                    "Direction: {0} degrees".format(round(math.degrees(self.angle), 2)))
+                    "Direction: {0} degrees".format(round(math.degrees(self.angle_radians), 2)))
             self.kill()
 
-    def get_direction(self):
-        # Need to convert radians to degrees
-        logger("Bullet Direction - Radians: {0}".format(self.angle))
-        angle_degrees = math.degrees(self.angle)
-        logger("Bullet Direction - Degrees: {0}".format(angle_degrees))
-        return angle_degrees
+class Target(pygame.sprite.Sprite):
+    """docstring for Target."""
+    def __init__(self, x, y):
+        super().__init__()
+
+        self.image = pygame.Surface([50, 400])
+
+        self.image.fill(RED)
+
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
 # Call this function so the Pygame library can initialize itself
 pygame.init()
 
-# Create an 800x600 sized screen
-screen = pygame.display.set_mode(screen_size)
-
-# Set the title of the window
+# Some setup
+screen = pygame.display.set_mode(SCREEN_SIZE)
 pygame.display.set_caption('Bullet Pong')
-
-# Disable this to make the mouse disappear when over our window
 pygame.mouse.set_visible(1)
-
-# This is a font we use to draw text on the screen (size 36)
 font = pygame.font.Font(None, 36)
-
-# Create a surface we can draw on
 background = pygame.Surface(screen.get_size())
+all_sprites = pygame.sprite.Group()
+clock = pygame.time.Clock()
+game_over = False
+done = False
 
 # Create the player object
 player = Player(50, SCREEN_HEIGHT/2)
 ball = Ball(25, 25)
+target = Target(SCREEN_WIDTH-60, (SCREEN_HEIGHT/2)-200)
 
-all_sprites_list = pygame.sprite.Group()
-all_sprites_list.add(player)
-
+# Create lists for collision detection purposes
 balls = pygame.sprite.Group()
-balls.add(ball)
-
-all_sprites_list.add(ball)
-
 bullet_list = pygame.sprite.Group()
 ball_hit_list = pygame.sprite.Group()
+targets = pygame.sprite.Group()
 
-clock = pygame.time.Clock()
-done = False
-
-score = 0
+all_sprites.add(player)
+all_sprites.add(ball)
+all_sprites.add(target)
+balls.add(ball)
+targets.add(target)
 
 while not done:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
@@ -306,43 +300,48 @@ while not done:
             bullet = Bullet(player.rect.x, player.rect.y, mouse_x, mouse_y)
 
             # Add the bullet to the lists
-            all_sprites_list.add(bullet)
+            all_sprites.add(bullet)
             bullet_list.add(bullet)
 
 
     # --- Win conditions
-    if score >= 1:
-        text = font.render("Game Over", 1, (200, 200, 200))
+    if game_over == True:
+        text = font.render("Game Over", 1, BLACK)
         textpos = text.get_rect(centerx=background.get_width()/2)
         textpos.top = 50
         screen.blit(text, textpos)
-        logger("Game Over")
-        done = True
+
+    if pygame.sprite.spritecollide(ball, targets, False):
+        logger("Score!")
+        score += 1
+        if score >= WIN_SCORE:
+            game_over = True
+        else:
+            ball.reset()
 
     # Calculate mechanics for each bullet
     for bullet in bullet_list:
-
         # See if it hit a ball
         ball_hit_list = pygame.sprite.spritecollide(bullet, balls, False)
 
         # For each ball hit, remove the bullet and bounce away
         for ball in ball_hit_list:
-            direction = bullet.get_direction()
+            direction = bullet.angle_degrees
             logger("Bouncing ball at {0} degrees".format(direction))
             ball.bounce(direction)
             bullet_list.remove(bullet)
-            all_sprites_list.remove(bullet)
+            all_sprites.remove(bullet)
             logger("Score: {0}".format(score))
 
     # This calls update on all the sprites
-    all_sprites_list.update()
+    all_sprites.update()
 
     # -- Draw everything
     # Clear screen
     screen.fill(WHITE)
 
     # Draw sprites
-    all_sprites_list.draw(screen)
+    all_sprites.draw(screen)
 
     # Flip screen
     pygame.display.flip()
