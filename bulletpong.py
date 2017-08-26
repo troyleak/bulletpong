@@ -15,9 +15,9 @@ import random
 
 # Set some variables
 
-screen_width = 800
-screen_height = 600
-screen_size = [screen_width, screen_height]
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen_size = [SCREEN_WIDTH, SCREEN_HEIGHT]
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -75,8 +75,8 @@ class Ball(pygame.sprite.Sprite):
                 "Speed: {0}".format(self.speed),
                 "Direction: {0}".format(self.direction),
                 "Bounces: {0}".format(self.bounces))
-        self.x = screen_width/2
-        self.y = screen_height/2
+        self.x = SCREEN_WIDTH/2
+        self.y = SCREEN_HEIGHT/2
         self.speed=0.0
         self.bounces = 0
 
@@ -111,7 +111,7 @@ class Ball(pygame.sprite.Sprite):
         self.x += self.speed * math.cos(direction_radians)
         self.y += self.speed * math.sin(direction_radians)
 
-        if self.y <= 0 or self.y >= screen_height - 25 or self.x >= screen_width-self.width:
+        if self.y <= 0 or self.y >= SCREEN_HEIGHT - 25 or self.x >= SCREEN_WIDTH-self.width:
             self.bounce(((2*self.direction)-90)%360)
 
         # Move the image to where our x and y are
@@ -161,9 +161,9 @@ class Player(pygame.sprite.Sprite):
             logger("resetting to bottom edge")
             self.rect.y = 0
 
-        if self.rect.y > screen_height-self.height:
+        if self.rect.y > SCREEN_HEIGHT-self.height:
             logger("resetting to top edge")
-            self.rect.y = screen_height-self.height
+            self.rect.y = SCREEN_HEIGHT-self.height
 
         self.rect.x += self.change_x
         self.rect.y += self.change_y
@@ -223,7 +223,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.x = int(self.floating_point_x)
 
         # If the bullet flies of the screen, get rid of it.
-        if self.rect.x < 0 or self.rect.x > screen_width or self.rect.y < 0 or self.rect.y > screen_height:
+        if self.rect.x < 0 or self.rect.x > SCREEN_WIDTH or self.rect.y < 0 or self.rect.y > SCREEN_HEIGHT:
             logger("--- Bullet Exited Screen ---", "X and Y positions: ({0},{1})".format(self.rect.x, self.rect.y),
                     "Speed: {0}".format(self.velocity),
                     "Direction: {0} degrees".format(round(math.degrees(self.angle), 2)))
@@ -255,7 +255,7 @@ font = pygame.font.Font(None, 36)
 background = pygame.Surface(screen.get_size())
 
 # Create the player object
-player = Player(50, screen_height/2)
+player = Player(50, SCREEN_HEIGHT/2)
 ball = Ball(25, 25)
 
 all_sprites_list = pygame.sprite.Group()
