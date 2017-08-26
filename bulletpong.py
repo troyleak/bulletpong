@@ -270,6 +270,10 @@ balls.add(ball)
 targets.add(target)
 
 while not done:
+
+    clock.tick(60)
+    screen.fill(WHITE)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
@@ -304,6 +308,10 @@ while not done:
             bullet_list.add(bullet)
 
 
+    if not game_over:
+        # This calls update on all the sprites
+        all_sprites.update()
+
     # --- Win conditions
     if game_over == True:
         text = font.render("Game Over", 1, BLACK)
@@ -316,8 +324,7 @@ while not done:
         score += 1
         if score >= WIN_SCORE:
             game_over = True
-        else:
-            ball.reset()
+        ball.reset()
 
     # Calculate mechanics for each bullet
     for bullet in bullet_list:
@@ -333,20 +340,9 @@ while not done:
             all_sprites.remove(bullet)
             logger("Score: {0}".format(score))
 
-    # This calls update on all the sprites
-    all_sprites.update()
-
-    # -- Draw everything
-    # Clear screen
-    screen.fill(WHITE)
-
     # Draw sprites
     all_sprites.draw(screen)
-
     # Flip screen
     pygame.display.flip()
-
-    # Pause
-    clock.tick(60)
 
 pygame.quit()
